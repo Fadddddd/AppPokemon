@@ -1,76 +1,58 @@
-import React, { useState } from "react";
-import axios from "axios";
-import "./App.css";
+import React, { useEffect, useState } from "react";
+import PokemonThumbnails from "./components/PokemonThumbnails";
 
-const App = () => {
-  const [pokemon, setPokemon] = useState("pikachu");
-  const [pokemonData, setPokemonData] = useState([]);
-  const [pokemonType, setPokemonType] = useState("");
+function App() {
+  const [allPokemons, setAllPokemons] = useState([]);
+  const [loadMore, setLoadMore] = useState(
+    "https://pokeapi.co/api/v2/pokemon?limit=20"
+  );
 
-  const getPokemon = async () => {
-    const toArray = [];
-    try {
-      const url = `https://pokeapi.co/api/v2/pokemon/${pokemon}`;
-      const res = await axios.get(url);
-      toArray.push(res.data);
-      setPokemonType(res.data.types[0].type.name);
-      setPokemon(toArray);
-      console.log(res);
-    } catch (e) {
-      console.log(e);
-    }
-  };
+  const getAllPokemons = async () => {
+    const res = await fetch(loadMore);
+    const data = await res.json();
 
-  const handleChange = (e) => {
-    setPokemon(e.target.value.toLowerCase()); //parce que si on rentre les données avec majuscules, ça ne fonctionnera pas
-  };
+    setLoadMore(data.next);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    getPokemon();
-  };
-  return (
-    <div className="App">
-      <form onSubmit={handleSubmit}>
-        <label>
-          <input
-            type="text"
-            onChange={handleChange}
-            placeholder="Enter Pokemon"
-          />
-        </label>
-      </form>
-      {pokemonData.map((data) => {
-        return (
-          <div className="container">
-            <img src={data.sprites["front_default"]}/>
-            <div className="divTable">
-              <div className="divTableBody"></div>
-              <div className="divTableRow">
-                <div className="divTableCell">Type</div>
-                <div className="divTableCell">{pokemonType}</div>
-              </div>
-              <div className="divTableRow">
-                <div className="divTableCell">Hauteur</div>
-                <div className="divTableCell">
-                  {""}
-                  {Math.round(data.height * 3.9 * 2.54)}cm
-                </div>
-              </div>
-              <div className="divTableRow">
-                <div className="divTableCell">Poids</div>
-                <div className="divTableCell">
-                  {""}
-                  {Math.round((data.weight / 4.3) * 0.453)}kg
-                </div>
-              </div>
-            </div>
-          </div>
-          
+    function createPokemonObject(result) {
+      result.forEach(async (pokemon) => {
+        const res = await fetch(
+          `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`
         );
-      })}
+        const data = await res.json();
+
+        setAllPokemons((currentList) => [...currentList, data]);
+        await allPokemons.sort((a, b) => a.id - b.id);
+      });
+    }
+    createPokemonObject(data.results);
+  };
+
+  useEffect(() => {
+    //same as ComponentDidMount
+    getAllPokemons();
+  }, []);
+
+  return (
+    <div className="app-container">
+      <h1>Pokemon Evolution</h1>
+      <div className="pokemon-container">
+        <div className="all-container">
+          {allPokemons.map((pokemonStats, index) => (
+            <PokemonThumbnails
+              id={pokemonStats.id}
+              name={pokemonStats.name}
+              image={pokemonStats.sprites.other.dream_world.front_default}
+              type={pokemonStats.types[0].type.name}
+              key={index}
+            />
+          ))}
+        </div>
+        <button className="load-more" onClick={() => getAllPokemons()}>
+          Load More
+        </button>
+      </div>
     </div>
   );
-};
+}
 
 export default App;
